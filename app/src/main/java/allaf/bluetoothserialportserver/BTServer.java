@@ -9,9 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class BTServer extends Thread {
     private BluetoothServerSocket serverSocket;
@@ -25,13 +25,13 @@ public class BTServer extends Thread {
     private InputStream inStream;
     private OutputStream outStream;
 
-    public Queue<String> messageQueue;
+    BlockingQueue<String> messageQueue;
 
-    public BTServer() {
+    BTServer() {
         inStream = null;
         outStream = null;
         BluetoothServerSocket tmp = null;
-        messageQueue = new LinkedList<>();
+        messageQueue = new LinkedBlockingQueue<>();
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         try {
             tmp = bluetoothAdapter.listenUsingRfcommWithServiceRecord(SERVER_NAME, BASE_UUID);
@@ -68,12 +68,14 @@ public class BTServer extends Thread {
             try {
                 bytes = inStream.read(buffer);
                 String receivedData = new String(buffer, Charset.defaultCharset());
-                message = receivedData.substring(0,bytes);
+                message = receivedData.substring(0, bytes);
                 if(!message.isEmpty())
-                    messageQueue.add(message);
+                    messageQueue.put(message);
             } catch (IOException e) {
                 e.printStackTrace();
                 receiveLoop = false;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -118,7 +120,7 @@ public class BTServer extends Thread {
         }
     }
 
-    public void stopServer() {
+    void stopServer() {
         serverLoop = false;
         receiveLoop = false;
     }

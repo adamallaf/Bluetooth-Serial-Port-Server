@@ -2,6 +2,7 @@ package allaf.bluetoothserialportserver;
 
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
+import android.icu.util.TimeUnit;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -15,7 +16,6 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 1;
-    private BluetoothAdapter bluetoothAdapter;
     private BTServer btServer;
     private TextView tv;
     private Timer receiveTimer;
@@ -34,14 +34,20 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (!bluetoothAdapter.isEnabled()) {
             Intent turnOnIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(turnOnIntent, REQUEST_ENABLE_BT);
         }
         btServer = new BTServer();
         btServer.start();
-        startReceiveTimer();
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                startReceiveTimer();
+            }
+        }, 1000);
     }
 
     private void startReceiveTimer() {
@@ -49,15 +55,15 @@ public class MainActivity extends AppCompatActivity {
         receiveTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                final String message = btServer.messageQueue.poll();
-                if(message != null) {
-                    runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            updateTextView(message);
+                            String message;
+                            message = btServer.messageQueue.poll();
+                            if(message != null)
+                                updateTextView(message);
                         }
                     });
-                }
             }
         }, (0), (200));
     }
